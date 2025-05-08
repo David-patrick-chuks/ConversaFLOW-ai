@@ -1,4 +1,5 @@
-import pdfParse from 'pdf-parse';
+import pkg from 'pdfjs-dist';
+const { getDocument } = pkg;
 import mammoth from 'mammoth';
 import textract from 'textract';
 import csvParser from 'csv-parser';
@@ -8,8 +9,18 @@ export async function parseFile(fileBuffer, fileType) {
   let content = '';
 
   if (fileType === 'pdf') {
-    const data = await pdfParse(fileBuffer);
-    content = data.text;
+    const pdf = await getDocument({ data: fileBuffer }).promise;
+    const maxPages = pdf.numPages;
+    let text = '';
+
+    for (let i = 1; i <= maxPages; i++) {
+      const page = await pdf.getPage(i);
+      const textContent = await page.getTextContent();
+      const pageText = textContent.items.map(item => item.str).join(' ');
+      text += pageText + '\n';
+    }
+
+    content = text;
   } else if (fileType === 'docx') {
     const result = await mammoth.extractRawText({ buffer: fileBuffer });
     content = result.value;
