@@ -16,8 +16,21 @@ app.use(express.json());
 const uploadsDir = path.join(process.cwd(), 'uploads');
 if (!fs.existsSync(uploadsDir)) fs.mkdirSync(uploadsDir);
 
+// ✅ Serve static files from /uploads
+app.use('/uploads', express.static(uploadsDir));
+
+// ✅ Root route for server status
+app.get('/', (req, res) => {
+  res.status(200).json({
+    status: 'success',
+    message: '🚀 Server is live!',
+  });
+});
+
+// API routes
 app.use('/api/agent', agentRoutes);
 
+// Connect to MongoDB
 connectDB();
 
 const PORT = process.env.PORT || 5000;
