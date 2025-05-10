@@ -7,23 +7,50 @@ import { VideoProcessor } from '../services/transcribeVideo.js';
 import { scrapeAllRoutes } from '../services/scrapeWebsite.js';
 import { Train_Agent_with_Youtube_URL } from '../services/trainYoutube.js';
 
-export const checkAgent = async (req, res) => {
-  const { agentId } = req.body;
-  const agent = await Agent.findOne({ agentId });
-  if (agent) {
-    return res.json({ exists: true, isTrained: agent.isTrained, agentName: agent.agentName });
+// Helper function to validate agentId
+const validateAgentId = (agentId) => {
+  if (!agentId) {
+    throw new Error('agentId is required');
   }
-  return res.json({ exists: false });
+  // Add any specific format validation if needed
+  if (typeof agentId !== 'string' || agentId.trim() === '') {
+    throw new Error('agentId must be a non-empty string');
+  }
+  return true;
+};
+
+export const checkAgent = async (req, res) => {
+  try {
+    const { agentId } = req.body;
+    validateAgentId(agentId);
+
+    const agent = await Agent.findOne({ agentId });
+    if (agent) {
+      return res.json({ 
+        exists: true, 
+        isTrained: agent.isTrained, 
+        agentName: agent.agentName 
+      });
+    }
+    return res.json({ exists: false });
+  } catch (error) {
+    res.status(400).json({ 
+      success: false, 
+      message: error.message 
+    });
+  }
 };
 
 export const trainAgent = async (req, res) => {
-  const { agentId, websiteUrl, youtubeUrl } = req.body;
-  const agentName = `AI Agent ${agentId}`;
-  const trainingData = [];
-
   try {
+    const { agentId, websiteUrl, youtubeUrl } = req.body;
+    validateAgentId(agentId);
+
+    const agentName = `AI Agent ${agentId}`;
+    const trainingData = [];
+
     if (req.files?.documents) {
-      for (const doc of req.files.documents) {
+      for (const doc of Array.isArray(req.files.documents) ? req.files.documents : [req.files.documents]) {
         const ext = path.extname(doc.originalname).slice(1).toLowerCase();
         const buffer = fs.readFileSync(doc.path);
         const content = await parseFile(buffer, ext);
@@ -77,25 +104,72 @@ export const trainAgent = async (req, res) => {
 
   } catch (error) {
     console.error('Error in trainAgent:', error);
-    res.status(500).json({ success: false, message: 'Training failed', error: error.message });
+    res.status(500).json({ 
+      success: false, 
+      message: 'Training failed', 
+      error: error.message 
+    });
   }
 };
 
 export const getAgentStatus = async (req, res) => {
-  const agent = await Agent.findOne({ agentId: req.params.agentId });
-  if (!agent) return res.status(404).json({ agentId: req.params.agentId, isTrained: false });
-  res.json({ agentId: agent.agentId, isTrained: agent.isTrained, agentName: agent.agentName });
+  try {
+    const { agentId } = req.params;
+    validateAgentId(agentId);
+
+    const agent = await Agent.findOne({ agentId });
+    if (!agent) {
+      return res.status(404).json({ 
+        agentId, 
+        isTrained: false, 
+        message: 'Agent not found' 
+      });
+    }
+    res.json({ 
+      agentId: agent.agentId, 
+      isTrained: agent.isTrained, 
+      agentName: agent.agentName 
+    });
+  } catch (error) {
+    res.status(400).json({ 
+      success: false, 
+      message: error.message 
+    });
+  }
 };
 
 export const sendAgentMessage = async (req, res) => {
-  const agent = await Agent.findOne({ agentId: req.params.agentId });
-  if (!agent || !agent.isTrained) {
-    return res.status(400).json({ answer: "Agent not trained yet." });
-  }
+  try {
+    const { agentId } = req.params;
+    validateAgentId(agentId);
 
-  const { question } = req.body;
-  res.json({
-    answer: `Sample response to: "${question}"`,
-    source: "trainingData"
-  });
+    const agent = await Agent.findOne({ agentId });
+    if (!agent) {
+      return res.status(404).json({ 
+        message: 'Agent not found' 
+      });
+    }
+    if (!agent.isTrained) {
+      return res.status(400).json({ 
+        message: 'Agent not trained yet' 
+      });
+    }
+
+    const { question } = req.body;
+    if (!question || typeof question !== 'string' || question.trim() === '') {
+      return res.status(400).json({ 
+        message: 'Valid question is required' 
+      });
+    }
+
+    res.json({
+      answer: `Sample response to: "${question}"`,
+      source: 'trainingData'
+    });
+  } catch (error) {
+    res.status(400).json({ 
+      success: false, 
+      message: error.message 
+    });
+  }
 };
