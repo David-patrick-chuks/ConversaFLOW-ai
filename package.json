@@ -5,7 +5,9 @@
   "type": "module",
   "scripts": {
     "start": "node server.js",
-    "dev" : "nodemon server.js"
+    "dev" : "nodemon server.js",
+    "site" : "node services/scrapeWebsite.js",
+    "yt" : "node controllers/agentController.js"
   },
   "keywords": [],
   "author": "",
