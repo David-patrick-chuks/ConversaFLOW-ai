@@ -1,10 +1,4 @@
-const SchemaType = {
-  OBJECT: "object",
-  ARRAY: "array",
-  STRING: "string",
-  NUMBER: "number",
-  BOOLEAN: "boolean",
-};
+import { SchemaType } from "@google/generative-ai";
 
 export const AIAgentResponseSchema = {
   description: "AI agent response with source attribution",
@@ -24,7 +18,7 @@ export const AIAgentResponseSchema = {
           sourceType: {
             type: SchemaType.STRING,
             description:
-              "Type of source (audio, video, document, website, youtube)",
+              "Type of source (audio, video, document, website, youtube) or null if not applicable",
             nullable: false,
           },
         },

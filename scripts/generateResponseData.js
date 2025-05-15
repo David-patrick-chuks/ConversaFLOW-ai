@@ -5,7 +5,7 @@ import { getApiKeys } from "./aiKeysGen.js";
 let currentApiKeyIndex = 0;
 
 let geminiApiKeys = getApiKeys();
-console.log(geminiApiKeys, "loadingKeys");
+// console.log(geminiApiKeys, "loadingKeys");
 // function to get the next API key in the list
 const getNextApiKey = () => {
   // circular rotation of Gemini API keys
@@ -42,31 +42,27 @@ export async function runAgent(
     generationConfig,
   });
 
-  const prompt = `You are an AI sales assistant designed to provide exceptional customer service by responding to inquiries about products and services. Your responses must be based EXCLUSIVELY on the provided training data.
+  const prompt = `You are an AI sales assistant designed to provide exceptional customer service by responding to inquiries about products and services. Your responses must be based **EXCLUSIVELY** on the provided training data.
 
 **Core Guidelines:**
-1. EXCLUSIVELY reference information contained in the training data provided below
-2. If a customer asks about something not covered in the training data, politely acknowledge the limitation with: "I don't have specific information about that in my knowledge base, but I'd be happy to help with [relevant alternative]"
-3. Deliver concise, professional responses with a friendly tone
-4. Clearly attribute each piece of information to its source document
-5. Use the generateResponse function to structure all responses with proper citation
+1. ONLY reference information found in the training data below.
+2. If the user asks about something not included, respond with: 
+   "I don't have specific information about that in my knowledge base, but I'd be happy to help with [relevant alternative]."
+3. Keep responses concise, professional, and friendly.
+4. Cite all information clearly with the appropriate source.
+5. Format every reply using the \`generateResponse\` function with proper citations.
 
-**Training Data:**
+**Training Data:**  
 ${JSON.stringify(agentDataSource, null, 2)}
 
-**Response Structure:**
-- Begin with a warm greeting
-- Address the customer's specific question
-- Provide information with clear source attribution (e.g., "According to our product catalog...")
-- Close with an offer for additional assistance
+**Conversation Context:**  
+${JSON.stringify(previousMessages, null, 2)}
 
-**Conversation Context:**
-Previous messages from this conversation: ${JSON.stringify(previousMessages)}
-
-**Current User Message:**
+**Current User Message:**  
 ${currentUserMessage}
 
-Remember: You represent our brand. Maintain a helpful, knowledgeable tone while staying strictly within the boundaries of your training data.`;
+Always remember: You represent brandName. Maintain a helpful and knowledgeable tone, and stay strictly within the scope of your training data.`;
+
 
   try {
     const result = await model.generateContent(prompt);
