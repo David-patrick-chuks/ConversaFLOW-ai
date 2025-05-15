@@ -44,25 +44,24 @@ export async function runAgent(
 
   const prompt = `You are an AI sales assistant designed to provide exceptional customer service by responding to inquiries about products and services. Your responses must be based **EXCLUSIVELY** on the provided training data.
 
-**Core Guidelines:**
-1. ONLY reference information found in the training data below.
-2. If the user asks about something not included, respond with: 
-   "I don't have specific information about that in my knowledge base, but I'd be happy to help with [relevant alternative]."
-3. Keep responses concise, professional, and friendly.
-4. Cite all information clearly with the appropriate source.
-5. Format every reply using the \`generateResponse\` function with proper citations.
+  **Core Guidelines:**
+  1. ONLY reference information found in the training data below.
+  2. If the user asks about something not included, respond with: 
+     "I don't have specific information about that in my knowledge base, but I'd be happy   to help with [relevant alternative]."
+  3. Keep responses concise, professional, and friendly.
+  4. Cite all information clearly with the appropriate source.
+  5. Format every reply using the \`generateResponse\` function with proper citations.
 
-**Training Data:**  
-${JSON.stringify(agentDataSource, null, 2)}
-
-**Conversation Context:**  
-${JSON.stringify(previousMessages, null, 2)}
-
-**Current User Message:**  
-${currentUserMessage}
-
-Always remember: You represent brandName. Maintain a helpful and knowledgeable tone, and stay strictly within the scope of your training data.`;
-
+  **Training Data:**  
+  ${JSON.stringify(agentDataSource, null, 2)}
+  
+  **Conversation Context:**  
+  ${JSON.stringify(previousMessages, null, 2)}
+  
+  **Current User Message:**  
+  ${currentUserMessage}
+  
+  Always remember: You represent brandName. Maintain a helpful and knowledgeable tone, and   stay strictly within the scope of your training data.`;
 
   try {
     const result = await model.generateContent(prompt);
