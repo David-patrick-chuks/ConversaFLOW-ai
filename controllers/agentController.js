@@ -9,9 +9,10 @@ import { transformYouTubeTranscript } from "../services/trainYoutube.js";
 import { runAgent } from "../scripts/generateResponseData.js";
 import { AIAgentResponseSchema } from "../schema/index.js";
 import { AIVisionService } from "../services/aiVisionService.js"; // New AI vision service
+import { AIAudioService } from "../services/aiAudioService.js";
 
 // Existing functions (checkAgent, validateAgentId, trainAgent, getAgentStatus) remain unchanged
-export const checkAgent = async (req, res) => {
+const checkAgent = async (req, res) => {
   try {
     const { agentId } = req.body;
     validateAgentId(agentId);
@@ -43,7 +44,7 @@ const validateAgentId = (agentId) => {
   return true;
 };
 
-export const trainAgent = async (req, res) => {
+const trainAgent = async (req, res) => {
   try {
     const { agentId, websiteUrl, youtubeUrl } = req.body;
 
@@ -163,7 +164,7 @@ export const trainAgent = async (req, res) => {
   }
 };
 
-export const getAgentStatus = async (req, res) => {
+const getAgentStatus = async (req, res) => {
   try {
     const { agentId } = req.params;
     validateAgentId(agentId);
@@ -190,14 +191,15 @@ export const getAgentStatus = async (req, res) => {
 };
 
 /**
- * Sends a message to a trained AI agent, handling text, image, or both, and retrieves its response.
+ * Sends a message to a trained AI agent, handling text, image, audio, or any combination, and retrieves its response.
  * If an image is provided, it is processed by an AI vision service to generate a description.
- * @param {Object} req - Express request object containing agentId in params, question and previousMessages in body, and optional image file.
+ * If an audio file is provided, it is transcribed by an AI audio service.
+ * @param {Object} req - Express request object containing agentId in params, question and previousMessages in body, and optional image/audio files.
  * @param {Object} res - Express response object.
  * @returns {Promise<void>} Responds with JSON containing the agent's response or error.
  * @throws {Error} If agentId is invalid, agent is not found, or input is invalid.
  */
-export const sendAgentMessage = async (req, res) => {
+const sendAgentMessage = async (req, res) => {
   try {
     const { agentId } = req.params;
     validateAgentId(agentId);
@@ -215,20 +217,24 @@ export const sendAgentMessage = async (req, res) => {
     }
 
     const { question, previousMessages } = req.body;
-    const image = req.file; // Image file from multer
+    const image = req.files?.image?.[0]; // Image file from multer
+    const audio = req.files?.audio?.[0]; // Audio file from multer
 
-    // Check input: text, image, or both
-    const hasText = question && typeof question === "string" && question.trim() !== "";
+    // Check input: text, image, audio, or any combination
+    const hasText =
+      question && typeof question === "string" && question.trim() !== "";
     const hasImage = !!image;
+    const hasAudio = !!audio;
 
-    if (!hasText && !hasImage) {
+    if (!hasText && !hasImage && !hasAudio) {
       return res.status(400).json({
-        message: "At least a question or an image is required",
+        message: "At least a question, an image, or an audio file is required",
       });
     }
 
     let currentMessage = "";
     let imageDescription = "";
+    let audioTranscription = "";
 
     // Process image if provided
     if (hasImage) {
@@ -240,19 +246,36 @@ export const sendAgentMessage = async (req, res) => {
           throw new Error("Failed to generate image description");
         }
       } finally {
-        // Clean up the image file
-        fs.unlinkSync(imagePath);
+        fs.unlinkSync(imagePath); // Clean up image file
       }
     }
 
-    // Combine text and image description
-    if (hasText && hasImage) {
-      currentMessage = `${question}\n\nImage Description: ${imageDescription}`;
-    } else if (hasText) {
-      currentMessage = question;
-    } else if (hasImage) {
-      currentMessage = `Image Description: ${imageDescription}`;
+    // Process audio if provided
+    if (hasAudio) {
+      const audioService = new AIAudioService();
+      const audioPath = audio.path;
+      try {
+        audioTranscription = await audioService.transcribeAudio(audioPath);
+        if (!audioTranscription) {
+          throw new Error("Failed to generate audio transcription");
+        }
+      } finally {
+        fs.unlinkSync(audioPath); // Clean up audio file
+      }
     }
+
+    // Combine text, image description, and audio transcription
+    const messageParts = [];
+    if (hasText) {
+      messageParts.push(question);
+    }
+    if (hasImage) {
+      messageParts.push(`Image Description: ${imageDescription}`);
+    }
+    if (hasAudio) {
+      messageParts.push(`Audio Transcription: ${audioTranscription}`);
+    }
+    currentMessage = messageParts.join("\n\n");
 
     // Previous messages is an array of previous messages (user and AI agent)
     const prevMessages = previousMessages || [];
@@ -277,17 +300,28 @@ export const sendAgentMessage = async (req, res) => {
       data: {
         message: response.message,
         source: response.sources,
-        imageDescription: hasImage ? imageDescription : null, // Include image description in response if applicable
+        imageDescription: hasImage ? imageDescription : null,
+        audioTranscription: hasAudio ? audioTranscription : null,
       },
     });
   } catch (error) {
-    // Clean up image file in case of error, if it exists
-    if (req.file) {
-      fs.unlinkSync(req.file.path);
+    // Clean up files in case of error
+    if (req.files?.image?.[0]) {
+      fs.unlinkSync(req.files.image[0].path);
+    }
+    if (req.files?.audio?.[0]) {
+      fs.unlinkSync(req.files.audio[0].path);
     }
     res.status(400).json({
       success: false,
       message: error.message,
     });
   }
+};
+
+module.exports = {
+  checkAgent,
+  trainAgent,
+  getAgentStatus,
+  sendAgentMessage,
 };
