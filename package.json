@@ -28,6 +28,8 @@
     "nodemailer": "^7.0.3",
     "pdfjs-dist": "^3.4.120",
     "puppeteer": "^24.8.2",
+    "puppeteer-extra": "^3.3.6",
+    "puppeteer-extra-plugin-stealth": "^2.11.2",
     "textract": "^2.5.0",
     "youtube-transcript": "^1.2.1"
   }

@@ -1,7 +1,11 @@
-import puppeteer from "puppeteer";
+import puppeteer from "puppeteer-extra";
+import StealthPlugin from "puppeteer-extra-plugin-stealth";
 import createDOMPurify from "dompurify";
 import { JSDOM } from "jsdom";
 import { URL } from "url";
+
+// Apply stealth plugin to evade bot detection
+puppeteer.use(StealthPlugin());
 
 /**
  * Cleans HTML content by removing all tags, leaving only text.
@@ -30,13 +34,62 @@ function cleanHTML(inputHtml) {
 async function scrapeAndCleanContent(url) {
   let browser = null;
   try {
-    browser = await puppeteer.launch({ headless: true });
+    browser = await puppeteer.launch({
+      headless: true,
+      args: [
+        "--no-sandbox",
+        "--disable-setuid-sandbox",
+        "--disable-dev-shm-usage",
+        "--disable-accelerated-2d-canvas",
+        "--no-first-run",
+        "--no-zygote",
+        "--single-process",
+        "--disable-gpu",
+      ],
+    });
     const page = await browser.newPage();
 
-    await page.goto(url, { waitUntil: "networkidle2", timeout: 30000 });
-    const htmlContent = await page.evaluate(() => document.body.innerHTML);
-    const cleanedContent = cleanHTML(htmlContent);
+    // Set user agent to mimic a real browser
+    await page.setUserAgent(
+      "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+    );
 
+    // Enable JavaScript and block unnecessary resources
+    await page.setJavaScriptEnabled(true);
+    await page.setRequestInterception(true);
+    page.on("request", (req) => {
+      if (["image", "stylesheet", "font"].includes(req.resourceType())) {
+        req.abort();
+      } else {
+        req.continue();
+      }
+    });
+
+    // Navigate to the URL and wait for content to load
+    const response = await page.goto(url, {
+      waitUntil: "domcontentloaded",
+      timeout: 30000,
+    });
+
+    // Check for Cloudflare verification page
+    const pageContent = await page.content();
+    if (
+      pageContent.includes("Verifying you are human") ||
+      pageContent.includes("Cloudflare")
+    ) {
+      throw new Error("Cloudflare verification detected");
+    }
+
+    // Wait for dynamic content (e.g., Medium articles)
+    await page.waitForTimeout(2000); // Wait 2 seconds for JavaScript to render
+
+    // Extract main content (target Medium article body if available)
+    const htmlContent = await page.evaluate(() => {
+      const article = document.querySelector("article") || document.body;
+      return article.innerHTML;
+    });
+
+    const cleanedContent = cleanHTML(htmlContent);
     if (!cleanedContent) {
       throw new Error("No content extracted from page");
     }
@@ -65,15 +118,23 @@ async function scrapeAndCleanContent(url) {
 async function getAllLinks(url) {
   let browser = null;
   try {
-    browser = await puppeteer.launch({ headless: true });
+    browser = await puppeteer.launch({
+      headless: true,
+      args: ["--no-sandbox", "--disable-setuid-sandbox"],
+    });
     const page = await browser.newPage();
 
-    await page.goto(url, { waitUntil: "networkidle2", timeout: 30000 });
-    const links = await page.evaluate(() =>
-      Array.from(document.querySelectorAll("a"))
-        .map((anchor) => anchor.href)
-        .filter((href) => href && href.startsWith("http"))
+    await page.setUserAgent(
+      "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
     );
+
+    await page.goto(url, { waitUntil: "domcontentloaded", timeout: 30000 });
+
+    const links = await page.evaluate(() => {
+      return Array.from(document.querySelectorAll("a"))
+        .map((anchor) => anchor.href)
+        .filter((href) => href && href.startsWith("http"));
+    });
 
     console.log(`Retrieved ${links.length} links from ${url}`);
     return links;
@@ -103,7 +164,7 @@ export async function scrapeAllRoutes(baseUrl) {
       throw new Error("baseUrl must be a non-empty string");
     }
     try {
-      new URL(baseUrl); // Ensure valid URL
+      new URL(baseUrl);
     } catch {
       throw new Error("Invalid URL format");
     }
@@ -111,7 +172,7 @@ export async function scrapeAllRoutes(baseUrl) {
     const visitedLinks = new Set();
     const linksToVisit = [baseUrl];
     let combinedContent = "";
-    const maxPages = 50; // Limit to prevent infinite scraping
+    const maxPages = 10; // Reduced limit for Medium to avoid excessive scraping
     let pageCount = 0;
 
     while (linksToVisit.length > 0 && pageCount < maxPages) {
@@ -120,15 +181,32 @@ export async function scrapeAllRoutes(baseUrl) {
         visitedLinks.add(currentLink);
         pageCount++;
 
-        const cleanedContent = await scrapeAndCleanContent(currentLink);
-        if (cleanedContent) {
-          combinedContent += `\n\n${cleanedContent}`;
+        try {
+          const cleanedContent = await scrapeAndCleanContent(currentLink);
+          if (cleanedContent) {
+            combinedContent += `\n\n${cleanedContent}`;
+          }
+        } catch (error) {
+          console.error(`Skipping ${currentLink}: ${error.message}`);
+          continue;
         }
 
         const newLinks = await getAllLinks(currentLink);
+        const parsedBaseUrl = new URL(baseUrl);
         for (const link of newLinks) {
-          if (link.startsWith(baseUrl) && !visitedLinks.has(link)) {
-            linksToVisit.push(link);
+          try {
+            const parsedLink = new URL(link);
+            // Only follow links within the same domain
+            if (
+              parsedLink.hostname === parsedBaseUrl.hostname &&
+              !visitedLinks.has(link) &&
+              !linksToVisit.includes(link)
+            ) {
+              linksToVisit.push(link);
+            }
+          } catch {
+            // Skip invalid URLs
+            continue;
           }
         }
       }
@@ -139,6 +217,8 @@ export async function scrapeAllRoutes(baseUrl) {
     }
 
     console.log(`Successfully scraped ${pageCount} pages from ${baseUrl}`);
+    console.log(`Total content length: ${combinedContent.length} characters`);
+
     return combinedContent.trim();
   } catch (error) {
     console.error(`Error scraping website ${baseUrl}: ${error.message}`);
@@ -146,5 +226,11 @@ export async function scrapeAllRoutes(baseUrl) {
   }
 }
 
-// scrapeAllRoutes("https://conversaflow.vercel.app")
-// scrapeAllRoutes("https://youtu.be/xww-80A-wns?si=NNJ6GzinXPZ5rZEc")
+
+
+// Example usage (for testing)
+scrapeAllRoutes(
+  "https://medium.com/codex/what-are-ai-agents-your-step-by-step-guide-to-build-your-own-df54193e2de3"
+)
+  .then((result) => console.log("Scraping result:", result))
+  .catch((error) => console.error("Scraping error:", error));
