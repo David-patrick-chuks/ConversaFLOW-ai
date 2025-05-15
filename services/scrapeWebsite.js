@@ -146,6 +146,5 @@ export async function scrapeAllRoutes(baseUrl) {
   }
 }
 
-
 // scrapeAllRoutes("https://conversaflow.vercel.app")
-scrapeAllRoutes("https://youtu.be/xww-80A-wns?si=NNJ6GzinXPZ5rZEc")
+// scrapeAllRoutes("https://youtu.be/xww-80A-wns?si=NNJ6GzinXPZ5rZEc")

@@ -6,7 +6,8 @@ import { AIAudioFileService } from "../services/transcribeAudio.js";
 import { VideoProcessor } from "../services/transcribeVideo.js";
 import { scrapeAllRoutes } from "../services/scrapeWebsite.js";
 import { transformYouTubeTranscript } from "../services/trainYoutube.js";
-
+import { runAgent } from "../scripts/generateResponseData.js";
+import { AIAgentResponseSchema } from "../schema/index.js";
 // Helper function to validate agentId
 export const checkAgent = async (req, res) => {
   try {
@@ -54,6 +55,7 @@ const validateAgentId = (agentId) => {
 export const trainAgent = async (req, res) => {
   try {
     const { agentId, websiteUrl, youtubeUrl } = req.body;
+
     validateAgentId(agentId);
 
     const agentName = `AI Agent ${agentId}`;
@@ -120,6 +122,7 @@ export const trainAgent = async (req, res) => {
     // Process website
     if (websiteUrl) {
       const websiteResult = await scrapeAllRoutes(websiteUrl);
+      console.log(websiteResult, "website-result...");
       if (typeof websiteResult === "string") {
         trainingData.push({ data: websiteResult, source: "website" });
       } else if (websiteResult?.error) {
@@ -157,7 +160,6 @@ export const trainAgent = async (req, res) => {
       { agentId, agentName, isTrained: true, trainingData },
       { upsert: true, new: true }
     );
-
     res.json({ success: true, message: "Training completed", agentId });
   } catch (error) {
     console.error(
@@ -217,16 +219,37 @@ export const sendAgentMessage = async (req, res) => {
       });
     }
 
-    const { question } = req.body;
+    const { question, previousMessages } = req.body;
     if (!question || typeof question !== "string" || question.trim() === "") {
       return res.status(400).json({
         message: "Valid question is required",
       });
     }
+    const currentMessage = question;
+    // prev message is the array of previous Message(user and ai agent)
+    const prevMessages = previousMessages || [];
+    const trainingSourceData = agent?.trainingData;
+    console.log(trainingSourceData, "source...");
+    const response = await runAgent(
+      AIAgentResponseSchema,
+      trainingSourceData,
+      prevMessages,
+      currentMessage
+    );
 
+    if (!response) {
+      return res.state(500).json({
+        success: false,
+        message: "Something went wrong pls try again!",
+      });
+    }
+    console.log(response, "ai response");
     res.json({
-      answer: `Sample response to: "${question}"`,
-      source: "trainingData",
+      success: true,
+      data: {
+        message: response.message,
+        source: response.sources,
+      },
     });
   } catch (error) {
     res.status(400).json({
