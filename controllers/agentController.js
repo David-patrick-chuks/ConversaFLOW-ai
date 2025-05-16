@@ -12,7 +12,7 @@ import { AIVisionService } from "../services/aiVisionService.js"; // New AI visi
 import { AIAudioService } from "../services/aiAudioService.js";
 
 // Existing functions (checkAgent, validateAgentId, trainAgent, getAgentStatus) remain unchanged
-const checkAgent = async (req, res) => {
+export const checkAgent = async (req, res) => {
   try {
     const { agentId } = req.body;
     validateAgentId(agentId);
@@ -44,7 +44,7 @@ const validateAgentId = (agentId) => {
   return true;
 };
 
-const trainAgent = async (req, res) => {
+export const trainAgent = async (req, res) => {
   try {
     const { agentId, websiteUrl, youtubeUrl } = req.body;
 
@@ -164,7 +164,7 @@ const trainAgent = async (req, res) => {
   }
 };
 
-const getAgentStatus = async (req, res) => {
+export const getAgentStatus = async (req, res) => {
   try {
     const { agentId } = req.params;
     validateAgentId(agentId);
@@ -199,7 +199,7 @@ const getAgentStatus = async (req, res) => {
  * @returns {Promise<void>} Responds with JSON containing the agent's response or error.
  * @throws {Error} If agentId is invalid, agent is not found, or input is invalid.
  */
-const sendAgentMessage = async (req, res) => {
+export const sendAgentMessage = async (req, res) => {
   try {
     const { agentId } = req.params;
     validateAgentId(agentId);
@@ -319,9 +319,3 @@ const sendAgentMessage = async (req, res) => {
   }
 };
 
-module.exports = {
-  checkAgent,
-  trainAgent,
-  getAgentStatus,
-  sendAgentMessage,
-};

@@ -229,8 +229,8 @@ export async function scrapeAllRoutes(baseUrl) {
 
 
 // Example usage (for testing)
-scrapeAllRoutes(
-  "https://medium.com/codex/what-are-ai-agents-your-step-by-step-guide-to-build-your-own-df54193e2de3"
-)
-  .then((result) => console.log("Scraping result:", result))
-  .catch((error) => console.error("Scraping error:", error));
+// scrapeAllRoutes(
+//   "https://medium.com/codex/what-are-ai-agents-your-step-by-step-guide-to-build-your-own-df54193e2de3"
+// )
+//   .then((result) => console.log("Scraping result:", result))
+//   .catch((error) => console.error("Scraping error:", error));
