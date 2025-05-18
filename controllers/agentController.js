@@ -52,6 +52,7 @@ export const trainAgent = async (req, res) => {
 
     const agentName = `AI Agent ${agentId}`;
     const trainingData = [];
+    const trainedSources = []; // Array to track trained sources
 
     if (req.files?.documents) {
       for (const doc of Array.isArray(req.files.documents)
@@ -62,6 +63,7 @@ export const trainAgent = async (req, res) => {
         const documentResult = await parseFile(buffer, ext);
         if (typeof documentResult === "string") {
           trainingData.push({ data: documentResult, source: "document" });
+          trainedSources.push("document"); // Add source to trainedSources
         } else if (documentResult?.error) {
           fs.unlinkSync(doc.path);
           return res.status(400).json({
@@ -84,6 +86,7 @@ export const trainAgent = async (req, res) => {
       );
       if (typeof audioResult === "string") {
         trainingData.push({ data: audioResult, source: "audio" });
+        trainedSources.push("audio"); // Add source to trainedSources
       } else if (audioResult?.error) {
         return res.status(400).json({
           success: false,
@@ -100,6 +103,7 @@ export const trainAgent = async (req, res) => {
       const videoResult = await videoProcessor.processVideoFile(fileName);
       if (typeof videoResult === "string") {
         trainingData.push({ data: videoResult, source: "video" });
+        trainedSources.push("video"); // Add source to trainedSources
       } else if (videoResult?.error) {
         return res.status(400).json({
           success: false,
@@ -115,6 +119,7 @@ export const trainAgent = async (req, res) => {
       console.log(websiteResult, "website-result...");
       if (typeof websiteResult === "string") {
         trainingData.push({ data: websiteResult, source: "website" });
+        trainedSources.push("website"); // Add source to trainedSources
       } else if (websiteResult?.error) {
         return res.status(400).json({
           success: false,
@@ -131,6 +136,9 @@ export const trainAgent = async (req, res) => {
         for (const item of youtubeResult) {
           if (item?.fullTranscript) {
             trainingData.push({ data: item.fullTranscript, source: "youtube" });
+            if (!trainedSources.includes("youtube")) {
+              trainedSources.push("youtube"); // Add source to trainedSources (only once)
+            }
           }
         }
       } else if (youtubeResult?.error) {
@@ -148,7 +156,14 @@ export const trainAgent = async (req, res) => {
       { agentId, agentName, isTrained: true, trainingData },
       { upsert: true, new: true }
     );
-    res.json({ success: true, message: "Training completed", agentId });
+
+    // Include trainedSources in the response
+    res.json({
+      success: true,
+      message: "Training completed",
+      agentId,
+      trainedSources, // Array of sources that were trained
+    });
   } catch (error) {
     console.error(
       `Error in trainAgent (source: ${error.source || "unknown"}): ${
