@@ -6,7 +6,7 @@ export const AIAgentResponseSchema = {
   properties: {
     message: {
       type: SchemaType.STRING,
-      description: "The response text from the AI agent",
+      description: "The response text from the AI agent, dont add (Source: ...) to the response",
       nullable: false,
     },
     sources: {
