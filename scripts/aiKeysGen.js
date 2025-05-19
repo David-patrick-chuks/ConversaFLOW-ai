@@ -9,9 +9,9 @@ export function getApiKeys() {
   const __dirname = dirname(__filename);
   const envFilePath = join(__dirname, "../.env");
   const envContent = fs.readFileSync(envFilePath, "utf-8");
-  console.log(envContent);
+  // console.log(envContent);
   const lines = envContent.trim().split(/\s+/);
-  console.log(lines);
+  // console.log(lines);
   lines.forEach((line) => {
     const match = line.match(/^GEMINI_API_KEY_\d+=(.*)$/);
     if (match) {
