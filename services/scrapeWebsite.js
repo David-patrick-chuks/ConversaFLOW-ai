@@ -3,6 +3,8 @@ import StealthPlugin from "puppeteer-extra-plugin-stealth";
 import createDOMPurify from "dompurify";
 import { JSDOM } from "jsdom";
 import { URL } from "url";
+import UserAgent from "user-agents";
+import { saveScrapedData } from "../utils/index.js"; // Adjust the import path as needed
 
 // Apply stealth plugin to evade bot detection
 puppeteer.use(StealthPlugin());
@@ -50,9 +52,10 @@ async function scrapeAndCleanContent(url) {
     const page = await browser.newPage();
 
     // Set user agent to mimic a real browser
-    await page.setUserAgent(
-      "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
-    );
+
+    const userAgent = new UserAgent({ deviceCategory: "desktop" }).toString();
+    console.log(`Configuring user agent: ${userAgent}`);
+    await page.setUserAgent(userAgent);
 
     // Enable JavaScript and block unnecessary resources
     await page.setJavaScriptEnabled(true);
@@ -80,9 +83,6 @@ async function scrapeAndCleanContent(url) {
       throw new Error("Cloudflare verification detected");
     }
 
-    // Wait for dynamic content (e.g., Medium articles)
-    await page.waitForTimeout(2000); // Wait 2 seconds for JavaScript to render
-
     // Extract main content (target Medium article body if available)
     const htmlContent = await page.evaluate(() => {
       const article = document.querySelector("article") || document.body;
@@ -95,6 +95,7 @@ async function scrapeAndCleanContent(url) {
     }
 
     console.log(`Successfully scraped content from ${url}`);
+
     return cleanedContent;
   } catch (error) {
     console.error(`Error scraping ${url}: ${error.message}`);
@@ -124,19 +125,23 @@ async function getAllLinks(url) {
     });
     const page = await browser.newPage();
 
-    await page.setUserAgent(
-      "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+    const userAgent = new UserAgent({ deviceCategory: "desktop" }).toString();
+    console.log(`Configuring user agent: ${userAgent}`);
+    await page.setUserAgent(userAgent);
+
+    await page.goto(url, { waitUntil: "networkidle2" });
+
+    // const links = await page.evaluate(() => {
+    //   return Array.from(document.querySelectorAll("a"))
+    //     .map((anchor) => anchor.href)
+    //     .filter((href) => href && href.startsWith("http"));
+    // });
+
+    const links = await page.evaluate(() =>
+      Array.from(document.querySelectorAll("a")).map((anchor) => anchor.href)
     );
 
-    await page.goto(url, { waitUntil: "domcontentloaded", timeout: 30000 });
-
-    const links = await page.evaluate(() => {
-      return Array.from(document.querySelectorAll("a"))
-        .map((anchor) => anchor.href)
-        .filter((href) => href && href.startsWith("http"));
-    });
-
-    console.log(`Retrieved ${links.length} links from ${url}`);
+    console.log(`Retrieved ${links.length}, ${links} links from ${url}`);
     return links;
   } catch (error) {
     console.error(`Error getting links from ${url}: ${error.message}`);
@@ -186,6 +191,7 @@ export async function scrapeAllRoutes(baseUrl) {
           if (cleanedContent) {
             combinedContent += `\n\n${cleanedContent}`;
           }
+          await saveScrapedData(currentLink, cleanedContent);
         } catch (error) {
           console.error(`Skipping ${currentLink}: ${error.message}`);
           continue;
@@ -226,11 +232,7 @@ export async function scrapeAllRoutes(baseUrl) {
   }
 }
 
-
-
 // Example usage (for testing)
-// scrapeAllRoutes(
-//   "https://medium.com/codex/what-are-ai-agents-your-step-by-step-guide-to-build-your-own-df54193e2de3"
-// )
-//   .then((result) => console.log("Scraping result:", result))
-//   .catch((error) => console.error("Scraping error:", error));
+scrapeAllRoutes("https://davidtsx.vercel.app")
+  .then((result) => console.log("Scraping result:", result))
+  .catch((error) => console.error("Scraping error:", error));

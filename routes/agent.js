@@ -23,7 +23,7 @@ router.post(
 router.get("/:agentId/status", getAgentStatus);
 router.post(
   "/:agentId/message",
-  upload.single("image"), // Add support for a single image upload
+  upload.fields([{name : "image", maxCount : 1}, {name :"audio" , maxCount : 1 }]), // Add support for a single image upload
   sendAgentMessage
 );
 
