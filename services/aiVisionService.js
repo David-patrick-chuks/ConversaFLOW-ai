@@ -11,14 +11,14 @@ export class AIVisionService {
   constructor() {
     // Initialize the list of API keys
     this.apiKeys = [
-        "AIzaSyAIcaMSaIPnbsulIMi7WJSrx95tiwyyjIo",
-        "AIzaSyDi4JRtfBP0NEXXWLT40rYTD5-_bIBIogQ",
-        "AIzaSyB1YZPMxgYzLdhyWOoLQoi6Akv_AVZQihs",
-        "AIzaSyADgAkDx5jvf8kmyk9NqcKSQtSNqeG62qA",
-        "AIzaSyAv4K3hVofefPm1d5mt4Y39NQVXNQ49Dbg",
-        "AIzaSyDV9XzIcYhYw9uqNrWZNfI25GT3iFlGy3A",
-        "AIzaSyDYeeex41Ssr409I1sx04Jxk3xlb-z1O5M",
-        "AIzaSyDAwMfnUqo7REPxSkLVOCo9OTeaEHAf43E",
+      "AIzaSyAIcaMSaIPnbsulIMi7WJSrx95tiwyyjIo",
+      "AIzaSyDi4JRtfBP0NEXXWLT40rYTD5-_bIBIogQ",
+      "AIzaSyB1YZPMxgYzLdhyWOoLQoi6Akv_AVZQihs",
+      "AIzaSyADgAkDx5jvf8kmyk9NqcKSQtSNqeG62qA",
+      "AIzaSyAv4K3hVofefPm1d5mt4Y39NQVXNQ49Dbg",
+      "AIzaSyDV9XzIcYhYw9uqNrWZNfI25GT3iFlGy3A",
+      "AIzaSyDYeeex41Ssr409I1sx04Jxk3xlb-z1O5M",
+      "AIzaSyDAwMfnUqo7REPxSkLVOCo9OTeaEHAf43E",
     ];
     this.currentApiKeyIndex = 0;
     this.ai = new GoogleGenAI({
@@ -43,7 +43,7 @@ export class AIVisionService {
       if (!fs.existsSync(imagePath)) {
         throw new Error(`File not found: ${imagePath}`);
       }
-
+      console.log(imagePath, "imagePath");
       // Determine MIME type
       const mimeType = mime.lookup(imagePath);
       if (!mimeType || !mimeType.startsWith("image/")) {
