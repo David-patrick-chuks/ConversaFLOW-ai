@@ -233,6 +233,6 @@ export async function scrapeAllRoutes(baseUrl) {
 }
 
 // Example usage (for testing)
-scrapeAllRoutes("https://davidtsx.vercel.app")
-  .then((result) => console.log("Scraping result:", result))
-  .catch((error) => console.error("Scraping error:", error));
+// scrapeAllRoutes("https://davidtsx.vercel.app")
+//   .then((result) => console.log("Scraping result:", result))
+//   .catch((error) => console.error("Scraping error:", error));

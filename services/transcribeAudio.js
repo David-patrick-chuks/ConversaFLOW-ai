@@ -54,7 +54,9 @@ export class AIAudioFileService {
       throw new Error("displayName must be a non-empty string");
     }
     if (!mimeType || !mimeType.startsWith("audio/")) {
-      throw new Error("mimeType must be a valid audio MIME type (e.g., audio/mp3)");
+      throw new Error(
+        "mimeType must be a valid audio MIME type (e.g., audio/mp3)"
+      );
     }
   }
 
@@ -107,7 +109,9 @@ export class AIAudioFileService {
       // Generate content with retries for rate limits
       while (retries < maxRetries) {
         try {
-          const model = this.genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+          const model = this.genAI.getGenerativeModel({
+            model: "gemini-1.5-flash",
+          });
           const result = await model.generateContent([
             "Transcribe or describe the content of this audio clip in detail.",
             {
@@ -128,24 +132,34 @@ export class AIAudioFileService {
         } catch (error) {
           if (error.message.includes("429")) {
             console.log(
-              `Rate limit exceeded for API key ${currentApiKeyIndex + 1}. Switching key and retrying...`
+              `Rate limit exceeded for API key ${
+                currentApiKeyIndex + 1
+              }. Switching key and retrying...`
             );
             this.apiKey = getNextApiKey();
             this.fileManager = new GoogleAIFileManager(this.apiKey);
             this.genAI = new GoogleGenerativeAI(this.apiKey);
             retries++;
             // Exponential backoff
-            await new Promise((resolve) => setTimeout(resolve, 1000 * Math.pow(2, retries)));
+            await new Promise((resolve) =>
+              setTimeout(resolve, 1000 * Math.pow(2, retries))
+            );
             continue;
           } else {
-            throw new Error(`Failed to generate content from audio: ${error.message}`);
+            throw new Error(
+              `Failed to generate content from audio: ${error.message}`
+            );
           }
         }
       }
 
-      throw new Error(`Failed to process audio after ${maxRetries} retries due to rate limiting.`);
+      throw new Error(
+        `Failed to process audio after ${maxRetries} retries due to rate limiting.`
+      );
     } catch (error) {
-      console.error(`Error processing audio file ${displayName}: ${error.message}`);
+      console.error(
+        `Error processing audio file ${displayName}: ${error.message}`
+      );
       return { error: error.message, source: "audio" };
     } finally {
       // Clean up uploaded file and local file
@@ -162,7 +176,9 @@ export class AIAudioFileService {
         console.log(`Deleted local file: ${filePath}`);
       } catch (error) {
         if (error.code !== "ENOENT") {
-          console.error(`Failed to delete local file ${filePath}: ${error.message}`);
+          console.error(
+            `Failed to delete local file ${filePath}: ${error.message}`
+          );
         }
       }
     }
