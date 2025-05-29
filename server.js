@@ -3,6 +3,7 @@ import dotenv from "dotenv";
 import cors from "cors";
 import { connectDB } from "./utils/mongoConnect.js";
 import agentRoutes from "./routes/agent.js";
+import userRoutes from "./routes/user.js";
 import path from "path";
 import fs from "fs";
 
@@ -29,6 +30,7 @@ app.get("/", (req, res) => {
 
 // API routes
 app.use("/api/agent", agentRoutes);
+app.use("/api/users", userRoutes);
 
 // Connect to MongoDB
 connectDB();
