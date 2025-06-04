@@ -10,17 +10,18 @@ import fs from "fs";
 dotenv.config();
 
 const app = express();
-
 app.use(
   cors({
-    origin: ["http://localhost:8080/*", "https://nexa-ai-one.vercel.app/*"],
+    origin: [
+      "http://localhost:8080", // Fixed: removed /*
+      "http://localhost:3000", // Fixed: removed /*
+      "https://nexa-ai-one.vercel.app", // Fixed: removed /*
+    ],
     credentials: true,
     methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS", "HEAD"],
     allowedHeaders: ["Content-Type", "Authorization", "X-Requested-With"],
   })
 );
-
-app.options("*", cors());
 
 app.use(express.json());
 
