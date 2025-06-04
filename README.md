@@ -4,8 +4,8 @@
 A full Express.js + MongoDB backend for training and testing AI agents using:
 - YouTube videos
 - Audio and video files
-- Website content
-- Documents (PDF, DOCX, etc.)
+- Website content.
+- Documents (PDF, DOCX, etc.).
 
 ## 📦 Setup
 
