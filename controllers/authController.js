@@ -1,7 +1,6 @@
 import jwt from "jsonwebtoken";
 import logger from "../config/logger.js";
 import passport from "passport";
-import passConfig from "../config/passport.js";
 import User from "../models/userModel.js";
 import {
   sendOTPEmail,
@@ -9,7 +8,6 @@ import {
   sendPasswordResetEmail,
   sendWelcomeEmail,
 } from "../services/emailService.js";
-// const { generateProfilePicture } = require("../services/profilePictureService");
 import {
   comparePassword,
   generateOTP,
@@ -17,6 +15,28 @@ import {
   getClientIp,
   hashPassword,
 } from "../utils/hashUtils.js";
+
+// Utility function to generate JWT token
+const generateToken = (userId) => {
+  return jwt.sign({ userId }, process.env.JWT_SECRET, {
+    expiresIn: process.env.JWT_EXPIRES_IN || "7d",
+  });
+};
+
+// Utility function to set token cookie
+const setTokenCookie = (res, token) => {
+  const cookieOptions = {
+    expires: new Date(
+      Date.now() +
+        (process.env.JWT_COOKIE_EXPIRES_IN || 7) * 24 * 60 * 60 * 1000
+    ),
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
+  };
+
+  res.cookie("token", token, cookieOptions);
+};
 
 // Forgot Password
 export const forgotPassword = async (req, res) => {
@@ -235,38 +255,67 @@ export const login = async (req, res) => {
     res.status(500).json({ message: "Internal server error" });
   }
 };
+export const googleAuth = (req, res, next) => {
+  passport.authenticate("google", {
+    scope: ["profile", "email"],
+    session: false,
+  })(req, res, next);
+};
 
-// Google OAuth
-export const googleAuth = passport.authenticate("google", {
-  scope: ["profile", "email"],
-  failureRedirect: "/access-denied",
-});
+// Handle Google OAuth callback
+export const googleAuthCallback = (req, res, next) => {
+  passport.authenticate(
+    "google",
+    {
+      session: false,
+      failureRedirect: `${
+        process.env.CLIENT_URL || "http://localhost:3000"
+      }/login?error=auth_failed`,
+    },
+    async (error, user, info) => {
+      if (error) {
+        logger.error("Google authentication error:", error);
+        return res.redirect(
+          `${
+            process.env.CLIENT_URL || "http://localhost:3000"
+          }/login?error=server_error`
+        );
+      }
 
-// Google OAuth callback
-export const googleAuthCallback = (req, res) => {
-  passport.authenticate("google", { session: false }, (error, user) => {
-    if (error || !user) {
-      logger.error("Google authentication failed:", error);
-      return res.redirect("/access-denied");
+      if (!user) {
+        logger.error("Google authentication failed: No user returned", info);
+        return res.redirect(
+          `${
+            process.env.CLIENT_URL || "http://localhost:3000"
+          }/login?error=no_user`
+        );
+      }
+
+      try {
+        // Generate JWT token
+        const token = generateToken(user._id);
+
+        // Set token cookie
+        setTokenCookie(res, token);
+
+        logger.info(`Google OAuth successful for user: ${user.email}`);
+
+        // Redirect to success page
+        const redirectUrl = `${
+          process.env.CLIENT_URL || "http://localhost:3000"
+        }/dashboard?login=success`;
+
+        res.redirect(redirectUrl);
+      } catch (tokenError) {
+        logger.error("JWT token generation error:", tokenError);
+        res.redirect(
+          `${
+            process.env.CLIENT_URL || "http://localhost:3000"
+          }/login?error=token_failed`
+        );
+      }
     }
-
-    // Generate JWT
-    const token = jwt.sign({ userId: user._id }, process.env.JWT_SECRET, {
-      expiresIn: "1h",
-    });
-
-    // Set JWT as HTTP-only cookie
-    res.cookie("token", token, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "strict",
-      maxAge: 60 * 60 * 1000,
-    });
-
-    // Redirect to profile
-    const clientBaseUrl = process.env.CORS_ORIGIN;
-    res.redirect(`${clientBaseUrl}/profile`);
-  })(req, res);
+  )(req, res, next);
 };
 
 // Logout

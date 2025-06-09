@@ -28,6 +28,10 @@ router.post("/logout", logout);
 
 // Google authentication routes
 router.get("/google", googleAuth);
-router.get("/google/callback", googleAuthCallback);
+router.get(
+  "/google/callback",
+
+  googleAuthCallback
+);
 
 export default router;
