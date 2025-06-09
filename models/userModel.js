@@ -7,6 +7,7 @@ const userSchema = new mongoose.Schema(
     email: { type: String, required: true, unique: true },
     password: { type: String, required: true },
     confirmPassword: { type: String }, // Not stored in DB, used for validation in controller
+    picture: { type: String },
     googleId: { type: String, unique: true, sparse: true },
     otp: { type: String },
     otpExpiry: { type: Date },
