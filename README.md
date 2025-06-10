@@ -1,5 +1,5 @@
 
-# AI Agent Training Backend
+# AI Agent Trainings Backend
 
 A full Express.js + MongoDB backend for training and testing AI agents using:
 - YouTube videos
